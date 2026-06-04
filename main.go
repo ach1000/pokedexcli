@@ -21,7 +21,7 @@ type config struct {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, []string) error
 }
 
 var commands map[string]cliCommand
@@ -48,21 +48,26 @@ func init() {
 			description: "Display the previous 20 location areas",
 			callback:    commandMapBack,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Explore a location area",
+			callback:    commandExplore,
+		},
 	}
 }
 
-func commandExit(_ *config) error {
+func commandExit(_ *config, _ []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(_ *config) error {
+func commandHelp(_ *config, _ []string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println()
 
-	preferredOrder := []string{"help", "exit", "map", "mapb"}
+	preferredOrder := []string{"help", "exit", "map", "mapb", "explore"}
 	printed := map[string]struct{}{}
 
 	for _, name := range preferredOrder {
@@ -94,7 +99,7 @@ func commandHelp(_ *config) error {
 	return nil
 }
 
-func commandMap(cfg *config) error {
+func commandMap(cfg *config, _ []string) error {
 	locationAreas, err := pokeapi.GetLocationAreas(cfg.nextLocationURL, cfg.httpClient)
 	if err != nil {
 		return err
@@ -110,7 +115,7 @@ func commandMap(cfg *config) error {
 	return nil
 }
 
-func commandMapBack(cfg *config) error {
+func commandMapBack(cfg *config, _ []string) error {
 	if cfg.prevLocationURL == "" {
 		fmt.Println("you're on the first page")
 		return nil
@@ -126,6 +131,27 @@ func commandMapBack(cfg *config) error {
 
 	for _, area := range locationAreas.Results {
 		fmt.Println(area.Name)
+	}
+
+	return nil
+}
+
+func commandExplore(cfg *config, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("usage: explore <location-area>")
+	}
+
+	name := args[0]
+	fmt.Printf("Exploring %s...\n", name)
+
+	result, err := pokeapi.ExploreLocationArea(name, cfg.httpClient)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Found Pokemon:")
+	for _, enc := range result.PokemonEncounters {
+		fmt.Printf(" - %s\n", enc.Pokemon.Name)
 	}
 
 	return nil
@@ -165,7 +191,7 @@ func main() {
 			continue
 		}
 
-		if err := command.callback(replConfig); err != nil {
+		if err := command.callback(replConfig, words[1:]); err != nil {
 			fmt.Println(err)
 		}
 	}
