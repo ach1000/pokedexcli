@@ -12,7 +12,9 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 - Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help`, `exit`, `map`, `mapb`, `explore`, `catch`, `inspect`, `pokedex`, and `cache`
 
 ## Current File Map
-- `main.go`: program entry point; runs an infinite REPL loop, defines command registry, and dispatches callbacks with shared REPL config.
+- `main.go`: program entry point; runs the REPL loop, defines shared config/registry, and dispatches callbacks.
+- `command_help.go`, `command_exit.go`, `command_map.go`, `command_explore.go`, `command_catch.go`, `command_inspect.go`, `command_pokedex.go`, `command_cache.go`: dedicated command callbacks.
+- `command_helpers.go`: shared helper(s) for command files.
 - `internal/pokeapi/location_area.go`: PokeAPI client for paginated location-area requests; accepts an `HTTPClient` interface for testability.
 - `internal/pokeapi/explore.go`: `ExploreLocationArea` — fetches Pokemon encounter list for a named location area.
 - `internal/pokeapi/pokemon.go`: `GetPokemon` — fetches a single Pokemon by name; `Pokemon` struct with name, base_experience, height, weight, stats, types.
@@ -112,9 +114,6 @@ Make targets:
 - `inspect` on an uncaught Pokemon prints `you have not caught that pokemon`.
 - `pokedex` with no caught Pokemon prints `Your Pokedex is empty.`
 - All commands take `words[1:]` as an args slice; no-arg commands ignore it.
-
-## Suggested Next Evolutions
-- Move command callbacks into dedicated files as command count grows.
 
 ## Ideas for Extending the Project
 - Update the CLI to support the "up" arrow to cycle through previous commands.
