@@ -14,14 +14,15 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 ## Current File Map
 - `main.go`: program entry point; runs the REPL loop, defines shared config/registry, and dispatches callbacks.
 - `command_help.go`, `command_exit.go`, `command_map.go`, `command_explore.go`, `command_catch.go`, `command_inspect.go`, `command_pokedex.go`, `command_cache.go`: dedicated command callbacks.
-- `command_helpers.go`: shared helper(s) for command files.
+- `command_test_helpers.go`: shared test helpers and fixtures for command tests.
+- `command_help_test.go`, `command_map_test.go`, `command_mapb_test.go`, `command_explore_test.go`, `command_catch_test.go`, `command_inspect_test.go`, `command_pokedex_test.go`, `command_cache_test.go`: dedicated unit tests for command callbacks.
 - `internal/pokeapi/location_area.go`: PokeAPI client for paginated location-area requests; accepts an `HTTPClient` interface for testability.
 - `internal/pokeapi/explore.go`: `ExploreLocationArea` — fetches Pokemon encounter list for a named location area.
 - `internal/pokeapi/pokemon.go`: `GetPokemon` — fetches a single Pokemon by name; `Pokemon` struct with name, base_experience, height, weight, stats, types.
 - `internal/pokeapi/caching_client.go`: `CachingClient` wraps any `HTTPClient` + `*pokecache.Cache`; serves cached responses on hit, caches 2xx responses on miss.
+- `internal/pokeapi/caching_client_test.go`: tests cache-key canonicalization behavior in the caching client.
 - `internal/pokecache/cache.go`: thread-safe in-memory cache with configurable TTL and background reap loop.
 - `internal/pokecache/cache_test.go`: unit tests for Add/Get, miss, overwrite, reap eviction, and reap preservation.
-- `commands_test.go`: unit tests for all command handlers using a mock HTTP client.
 - `repl.go`: contains `cleanInput(text string) []string` utility.
 - `repl_test.go`: table-driven tests for `cleanInput`.
 - `Makefile`: convenience targets for build, run, test, clean.
@@ -56,7 +57,7 @@ Implementation details:
 `internal/pokeapi/location_area_test.go` validates:
 - Successful JSON parsing, default URL fallback, non-2xx error, HTTP error, invalid JSON.
 
-`commands_test.go` validates:
+Dedicated command test files validate:
 - `commandHelp` lists all registered command names.
 - `commandMapBack` first-page guard, happy-path pagination, HTTP error propagation.
 - `commandMap` prints area names, updates config URLs, propagates HTTP errors.
