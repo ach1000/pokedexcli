@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"time"
 
 	"github.com/ach1000/pokedexcli/internal/pokeapi"
+	"github.com/ach1000/pokedexcli/internal/pokecache"
 )
 
 type config struct {
@@ -139,9 +141,10 @@ func stringValue(value *string) string {
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
+	cache := pokecache.NewCache(5 * time.Minute)
 	replConfig := &config{
 		nextLocationURL: pokeapi.LocationAreaURL,
-		httpClient:      &http.Client{},
+		httpClient:      pokeapi.NewCachingClient(&http.Client{}, cache),
 	}
 
 	for {

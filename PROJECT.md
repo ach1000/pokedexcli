@@ -13,7 +13,11 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 
 ## Current File Map
 - `main.go`: program entry point; runs an infinite REPL loop, defines command registry, and dispatches callbacks with shared REPL config.
-- `internal/pokeapi/location_area.go`: internal PokeAPI client for paginated location-area requests.
+- `internal/pokeapi/location_area.go`: PokeAPI client for paginated location-area requests; accepts an `HTTPClient` interface for testability.
+- `internal/pokeapi/caching_client.go`: `CachingClient` wraps any `HTTPClient` + `*pokecache.Cache`; serves cached responses on hit, caches 2xx responses on miss.
+- `internal/pokecache/cache.go`: thread-safe in-memory cache with configurable TTL and background reap loop.
+- `internal/pokecache/cache_test.go`: unit tests for Add/Get, miss, overwrite, reap eviction, and reap preservation.
+- `commands_test.go`: unit tests for `commandMap` and `commandMapBack` using a mock HTTP client.
 - `repl.go`: contains `cleanInput(text string) []string` utility.
 - `repl_test.go`: table-driven tests for `cleanInput`.
 - `Makefile`: convenience targets for build, run, test, clean.
@@ -39,7 +43,17 @@ Implementation details:
 - Tab/newline whitespace handling.
 - Empty string input.
 
-The tests compare both expected slice length and per-word values.
+`internal/pokecache/cache_test.go` validates:
+- Add/Get round-trip, cache miss, overwrite semantics.
+- Reap loop evicts entries older than the interval.
+- Reap loop preserves entries that were added recently.
+
+`internal/pokeapi/location_area_test.go` validates:
+- Successful JSON parsing, default URL fallback, non-2xx error, HTTP error, invalid JSON.
+
+`commands_test.go` validates:
+- `commandMapBack` first-page guard (no HTTP call).
+- `commandMap` prints area names, updates config URLs, propagates HTTP errors.
 
 ## Build and Execution Commands
 Use either raw Go commands or Make targets.
@@ -60,10 +74,11 @@ Make targets:
 - `repl.log` (captured CLI output log)
 
 ## Assumptions and Constraints
-- Package structure is currently single-package (`package main`).
+- Package structure: `main` package plus `internal/pokeapi` and `internal/pokecache`.
 - No external dependencies beyond Go standard library.
 - REPL uses the first normalized token as the command key in a command registry.
-- Command callbacks now share pagination state via `*config` (next/previous location URLs).
+- Command callbacks share state via `*config` (next/previous location URLs + `HTTPClient`).
+- The `HTTPClient` stored in `config` is always a `*pokeapi.CachingClient` wrapping `*http.Client` and a 5-minute `pokecache.Cache`.
 - Output binary name is `pokedexcli`.
 
 ## REPL Runtime Behavior
@@ -81,8 +96,7 @@ Make targets:
 
 ## Suggested Next Evolutions
 - Move command callbacks and registry into dedicated files as command count grows.
-- Add command parsing and dispatch tests, including map/mapb pagination behavior.
-- Add error-path and edge-case tests once command handling exists.
+- Add more PokeAPI endpoints (e.g. explore a location area, catch Pokemon).
 
 ## Maintenance Rule
 When making further changes, update this file in the same PR/commit if any of the following are affected:
