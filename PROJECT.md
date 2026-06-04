@@ -9,7 +9,7 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 - Language: Go
 - Module: github.com/ach1000/pokedexcli
 - Current app type: interactive CLI with simple REPL loop
-- Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help`, `exit`, `map`, `mapb`, `explore`, `catch`, and `inspect`
+- Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help`, `exit`, `map`, `mapb`, `explore`, `catch`, `inspect`, and `pokedex`
 
 ## Current File Map
 - `main.go`: program entry point; runs an infinite REPL loop, defines command registry, and dispatches callbacks with shared REPL config.
@@ -57,9 +57,10 @@ Implementation details:
 - `commandHelp` lists all registered command names.
 - `commandMapBack` first-page guard, happy-path pagination, HTTP error propagation.
 - `commandMap` prints area names, updates config URLs, propagates HTTP errors.
-- `commandCatch` missing arg, HTTP error, guaranteed-catch adds to pokedex, guaranteed-escape does not.
+- `commandCatch` missing arg, HTTP error, guaranteed-catch (adds to pokedex + inspect hint), guaranteed-escape (not added).
 - `commandInspect` missing arg, not-yet-caught message, full detail output (name/height/weight/stats/types).
 - `commandExplore` prints Pokemon names, missing arg, HTTP error.
+- `commandPokedex` empty-pokedex message, lists all caught Pokemon names.
 
 ## Build and Execution Commands
 Use either raw Go commands or Make targets.
@@ -101,13 +102,26 @@ Make targets:
 	- `explore <area>`: lists all Pokemon encounters in a named location area.
 	- `catch <pokemon>`: attempts to catch a Pokemon; chance based on base_experience; adds to pokedex on success.
 	- `inspect <pokemon>`: prints name, height, weight, stats, and types for a caught Pokemon.
+	- `pokedex`: lists the names of all caught Pokemon.
 - `mapb` on the first page prints `you're on the first page`.
+- `catch` success also prints `You may now inspect it with the inspect command.`
 - `inspect` on an uncaught Pokemon prints `you have not caught that pokemon`.
+- `pokedex` with no caught Pokemon prints `Your Pokedex is empty.`
 - All commands take `words[1:]` as an args slice; no-arg commands ignore it.
 
 ## Suggested Next Evolutions
 - Move command callbacks into dedicated files as command count grows.
-- Add a `pokedex` command to list all caught Pokemon.
+
+## Ideas for Extending the Project
+- Update the CLI to support the "up" arrow to cycle through previous commands.
+- Add command line completion for commands and names of areas and Pokemon.
+- Simulate battles between Pokemon.
+- Keep Pokemon in a "party" and allow them to level up.
+- Allow caught Pokemon to evolve after a set amount of time.
+- Persist a user's Pokedex to disk so they can save progress between sessions.
+- Use the PokeAPI to make exploration more interesting (e.g. offer area choices and accept "left"/"right").
+- Random encounters with wild Pokemon.
+- Add support for different ball types (Pokeball, Great Ball, Ultra Ball) with different catch rates.
 
 ## Maintenance Rule
 When making further changes, update this file in the same PR/commit if any of the following are affected:
