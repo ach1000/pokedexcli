@@ -18,6 +18,12 @@ type Cache struct {
 	interval time.Duration
 }
 
+// Stats contains basic runtime cache metrics.
+type Stats struct {
+	ItemCount       int
+	AverageLifetime time.Duration
+}
+
 // NewCache creates a cache that evicts entries older than interval.
 // The reap loop runs in a background goroutine until the process exits.
 func NewCache(interval time.Duration) *Cache {
@@ -42,6 +48,28 @@ func (c *Cache) Get(key string) ([]byte, bool) {
 	defer c.mu.RUnlock()
 	entry, ok := c.entries[key]
 	return entry.val, ok
+}
+
+// Stats returns a snapshot of the cache size and average item age.
+func (c *Cache) Stats() Stats {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	count := len(c.entries)
+	if count == 0 {
+		return Stats{}
+	}
+
+	now := time.Now()
+	var totalLifetime time.Duration
+	for _, entry := range c.entries {
+		totalLifetime += now.Sub(entry.createdAt)
+	}
+
+	return Stats{
+		ItemCount:       count,
+		AverageLifetime: totalLifetime / time.Duration(count),
+	}
 }
 
 // reapLoop evicts entries that are older than the cache interval.

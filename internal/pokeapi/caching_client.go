@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/ach1000/pokedexcli/internal/pokecache"
 )
@@ -23,7 +24,7 @@ func NewCachingClient(inner HTTPClient, cache *pokecache.Cache) HTTPClient {
 // Do checks the cache first. On a miss it delegates to the inner client,
 // caches the response body, and returns a reconstructed response.
 func (c *CachingClient) Do(req *http.Request) (*http.Response, error) {
-	key := req.URL.String()
+	key := canonicalCacheKey(req)
 
 	if body, ok := c.cache.Get(key); ok {
 		return &http.Response{
@@ -50,4 +51,26 @@ func (c *CachingClient) Do(req *http.Request) (*http.Response, error) {
 
 	resp.Body = io.NopCloser(bytes.NewReader(body))
 	return resp, nil
+}
+
+func canonicalCacheKey(req *http.Request) string {
+	if req == nil || req.URL == nil {
+		return ""
+	}
+
+	u := *req.URL
+
+	host := strings.ToLower(u.Hostname())
+	if (host == "pokeapi.co" || strings.HasSuffix(host, ".pokeapi.co")) && strings.HasPrefix(u.Path, "/api/v2/location-area/") {
+		q := u.Query()
+		if q.Get("offset") == "0" {
+			q.Del("offset")
+		}
+		if q.Get("limit") == "20" {
+			q.Del("limit")
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	return u.String()
 }

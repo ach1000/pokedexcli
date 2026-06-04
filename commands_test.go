@@ -9,8 +9,10 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ach1000/pokedexcli/internal/pokeapi"
+	"github.com/ach1000/pokedexcli/internal/pokecache"
 )
 
 // commandMockHTTPClient is a test double for pokeapi.HTTPClient.
@@ -52,9 +54,11 @@ func captureStdout(t *testing.T, fn func()) string {
 }
 
 func makeTestConfig(client pokeapi.HTTPClient) *config {
+	cache := pokecache.NewCache(1 * time.Minute)
 	return &config{
 		nextLocationURL: pokeapi.LocationAreaURL,
 		httpClient:      client,
+		cache:           cache,
 		pokedex:         map[string]pokeapi.Pokemon{},
 		randIntn:        rand.Intn,
 	}
@@ -71,7 +75,7 @@ func TestCommandHelp_PrintsKnownCommands(t *testing.T) {
 		}
 	})
 
-	for _, name := range []string{"help", "exit", "map", "mapb", "explore", "catch"} {
+	for _, name := range []string{"help", "exit", "map", "mapb", "explore", "catch", "inspect", "pokedex", "cache"} {
 		if !strings.Contains(out, name) {
 			t.Errorf("expected %q in help output, got: %q", name, out)
 		}
@@ -281,6 +285,41 @@ func TestCommandPokedex_ListsCaughtPokemon(t *testing.T) {
 	}
 	if !strings.Contains(out, "caterpie") {
 		t.Errorf("expected 'caterpie' in output, got: %q", out)
+	}
+}
+
+// --- commandCache tests ---
+
+func TestCommandCache_PrintsStats(t *testing.T) {
+	cfg := makeTestConfig(nil)
+	cfg.cache.Add("k1", []byte("v1"))
+
+	out := captureStdout(t, func() {
+		if err := commandCache(cfg, nil); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "Cache items: 1") {
+		t.Errorf("expected item count in output, got: %q", out)
+	}
+	if !strings.Contains(out, "Average lifetime:") {
+		t.Errorf("expected average lifetime in output, got: %q", out)
+	}
+}
+
+func TestCommandCache_NoConfiguredCache(t *testing.T) {
+	cfg := makeTestConfig(nil)
+	cfg.cache = nil
+
+	out := captureStdout(t, func() {
+		if err := commandCache(cfg, nil); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "Cache is not configured") {
+		t.Errorf("expected missing-cache message, got: %q", out)
 	}
 }
 

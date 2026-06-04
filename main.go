@@ -17,6 +17,7 @@ type config struct {
 	nextLocationURL string
 	prevLocationURL string
 	httpClient      pokeapi.HTTPClient
+	cache           *pokecache.Cache
 	pokedex         map[string]pokeapi.Pokemon
 	randIntn        func(int) int
 }
@@ -71,6 +72,11 @@ func init() {
 			description: "List all caught Pokemon",
 			callback:    commandPokedex,
 		},
+		"cache": {
+			name:        "cache",
+			description: "Show cache stats",
+			callback:    commandCache,
+		},
 	}
 }
 
@@ -85,7 +91,7 @@ func commandHelp(_ *config, _ []string) error {
 	fmt.Println("Usage:")
 	fmt.Println()
 
-	preferredOrder := []string{"help", "exit", "map", "mapb", "explore", "catch", "inspect", "pokedex"}
+	preferredOrder := []string{"help", "exit", "map", "mapb", "explore", "catch", "inspect", "pokedex", "cache"}
 	printed := map[string]struct{}{}
 
 	for _, name := range preferredOrder {
@@ -163,6 +169,18 @@ func commandPokedex(cfg *config, _ []string) error {
 	for name := range cfg.pokedex {
 		fmt.Printf(" - %s\n", name)
 	}
+	return nil
+}
+
+func commandCache(cfg *config, _ []string) error {
+	if cfg.cache == nil {
+		fmt.Println("Cache is not configured.")
+		return nil
+	}
+
+	stats := cfg.cache.Stats()
+	fmt.Printf("Cache items: %d\n", stats.ItemCount)
+	fmt.Printf("Average lifetime: %s\n", stats.AverageLifetime.Round(time.Millisecond))
 	return nil
 }
 
@@ -254,6 +272,7 @@ func main() {
 	replConfig := &config{
 		nextLocationURL: pokeapi.LocationAreaURL,
 		httpClient:      pokeapi.NewCachingClient(&http.Client{}, cache),
+		cache:           cache,
 		pokedex:         map[string]pokeapi.Pokemon{},
 		randIntn:        rand.Intn,
 	}

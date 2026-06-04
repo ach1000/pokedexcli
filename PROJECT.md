@@ -9,7 +9,7 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 - Language: Go
 - Module: github.com/ach1000/pokedexcli
 - Current app type: interactive CLI with simple REPL loop
-- Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help`, `exit`, `map`, `mapb`, `explore`, `catch`, `inspect`, and `pokedex`
+- Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help`, `exit`, `map`, `mapb`, `explore`, `catch`, `inspect`, `pokedex`, and `cache`
 
 ## Current File Map
 - `main.go`: program entry point; runs an infinite REPL loop, defines command registry, and dispatches callbacks with shared REPL config.
@@ -49,6 +49,7 @@ Implementation details:
 - Add/Get round-trip, cache miss, overwrite semantics.
 - Reap loop evicts entries older than the interval.
 - Reap loop preserves entries that were added recently.
+- `Stats()` reports item count and average lifetime for empty and non-empty caches.
 
 `internal/pokeapi/location_area_test.go` validates:
 - Successful JSON parsing, default URL fallback, non-2xx error, HTTP error, invalid JSON.
@@ -61,6 +62,7 @@ Implementation details:
 - `commandInspect` missing arg, not-yet-caught message, full detail output (name/height/weight/stats/types).
 - `commandExplore` prints Pokemon names, missing arg, HTTP error.
 - `commandPokedex` empty-pokedex message, lists all caught Pokemon names.
+- `commandCache` prints item count + average lifetime and handles missing cache configuration.
 
 ## Build and Execution Commands
 Use either raw Go commands or Make targets.
@@ -86,6 +88,7 @@ Make targets:
 - REPL uses the first normalized token as the command key in a command registry.
 - Command callbacks share state via `*config` (next/previous location URLs, `HTTPClient`, `pokedex map[string]Pokemon`, `randIntn func(int) int`).
 - The `HTTPClient` stored in `config` is always a `*pokeapi.CachingClient` wrapping `*http.Client` and a 5-minute `pokecache.Cache`.
+- Cache keys are canonicalized for PokeAPI location-area URLs so equivalent default pagination URLs share a single cache entry.
 - `randIntn` is injectable (defaults to `rand.Intn`) so catch-command tests can deterministically force catch or escape.
 - Output binary name is `pokedexcli`.
 
@@ -103,6 +106,7 @@ Make targets:
 	- `catch <pokemon>`: attempts to catch a Pokemon; chance based on base_experience; adds to pokedex on success.
 	- `inspect <pokemon>`: prints name, height, weight, stats, and types for a caught Pokemon.
 	- `pokedex`: lists the names of all caught Pokemon.
+	- `cache`: prints basic cache stats (item count and average lifetime).
 - `mapb` on the first page prints `you're on the first page`.
 - `catch` success also prints `You may now inspect it with the inspect command.`
 - `inspect` on an uncaught Pokemon prints `you have not caught that pokemon`.
@@ -111,7 +115,6 @@ Make targets:
 
 ## Suggested Next Evolutions
 - Move command callbacks into dedicated files as command count grows.
-- Canonicalize cache keys for equivalent PokeAPI URLs (e.g. treat default pagination query params consistently) to reduce duplicate cache entries.
 
 ## Ideas for Extending the Project
 - Update the CLI to support the "up" arrow to cycle through previous commands.

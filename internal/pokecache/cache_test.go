@@ -84,3 +84,30 @@ func TestCache_ReapPreservesNewEntries(t *testing.T) {
 		t.Errorf("want %q, got %q", "keep me", string(got))
 	}
 }
+
+func TestCache_StatsEmpty(t *testing.T) {
+	c := NewCache(5 * time.Minute)
+	stats := c.Stats()
+
+	if stats.ItemCount != 0 {
+		t.Errorf("expected 0 items, got %d", stats.ItemCount)
+	}
+	if stats.AverageLifetime != 0 {
+		t.Errorf("expected 0 average lifetime, got %s", stats.AverageLifetime)
+	}
+}
+
+func TestCache_StatsNonEmpty(t *testing.T) {
+	c := NewCache(5 * time.Minute)
+	c.Add("k1", []byte("v1"))
+
+	time.Sleep(20 * time.Millisecond)
+	stats := c.Stats()
+
+	if stats.ItemCount != 1 {
+		t.Fatalf("expected 1 item, got %d", stats.ItemCount)
+	}
+	if stats.AverageLifetime <= 0 {
+		t.Errorf("expected positive average lifetime, got %s", stats.AverageLifetime)
+	}
+}
