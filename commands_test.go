@@ -246,6 +246,66 @@ func TestCommandCatch_CatchFail_NotAddedToPokedex(t *testing.T) {
 	}
 }
 
+// --- commandInspect tests ---
+
+const inspectPikachuJSON = `{
+  "name": "pikachu",
+  "base_experience": 112,
+  "height": 4,
+  "weight": 60,
+  "stats": [
+    {"base_stat": 35, "stat": {"name": "hp",     "url": ""}},
+    {"base_stat": 55, "stat": {"name": "attack",  "url": ""}}
+  ],
+  "types": [
+    {"type": {"name": "electric", "url": ""}}
+  ]
+}`
+
+func TestCommandInspect_MissingArgReturnsError(t *testing.T) {
+	cfg := makeTestConfig(nil)
+	if err := commandInspect(cfg, nil); err == nil {
+		t.Fatal("expected error when no pokemon arg given, got nil")
+	}
+}
+
+func TestCommandInspect_NotCaught(t *testing.T) {
+	cfg := makeTestConfig(nil)
+
+	out := captureStdout(t, func() {
+		if err := commandInspect(cfg, []string{"pikachu"}); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "you have not caught that pokemon") {
+		t.Errorf("expected not-caught message, got: %q", out)
+	}
+}
+
+func TestCommandInspect_PrintsDetails(t *testing.T) {
+	client := &commandMockHTTPClient{body: catchPikachuJSON, statusCode: http.StatusOK}
+	cfg := makeTestConfig(client)
+	cfg.randIntn = func(_ int) int { return 0 } // guaranteed catch
+
+	// Catch first so the pokemon is in the pokedex.
+	// Use the richer inspectPikachuJSON for the inspect call.
+	client.body = inspectPikachuJSON
+	captureStdout(t, func() { commandCatch(cfg, []string{"pikachu"}) })
+
+	out := captureStdout(t, func() {
+		if err := commandInspect(cfg, []string{"pikachu"}); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	for _, want := range []string{"Name: pikachu", "Height: 4", "Weight: 60", "hp", "attack", "electric"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected %q in output, got: %q", want, out)
+		}
+	}
+}
+
 // --- commandExplore tests ---
 
 const exploreJSON = `{

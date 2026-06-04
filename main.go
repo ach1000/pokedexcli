@@ -61,6 +61,11 @@ func init() {
 			description: "Attempt to catch a Pokemon",
 			callback:    commandCatch,
 		},
+		"inspect": {
+			name:        "inspect",
+			description: "Inspect a caught Pokemon",
+			callback:    commandInspect,
+		},
 	}
 }
 
@@ -75,7 +80,7 @@ func commandHelp(_ *config, _ []string) error {
 	fmt.Println("Usage:")
 	fmt.Println()
 
-	preferredOrder := []string{"help", "exit", "map", "mapb", "explore", "catch"}
+	preferredOrder := []string{"help", "exit", "map", "mapb", "explore", "catch", "inspect"}
 	printed := map[string]struct{}{}
 
 	for _, name := range preferredOrder {
@@ -139,6 +144,32 @@ func commandMapBack(cfg *config, _ []string) error {
 
 	for _, area := range locationAreas.Results {
 		fmt.Println(area.Name)
+	}
+
+	return nil
+}
+
+func commandInspect(cfg *config, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("usage: inspect <pokemon>")
+	}
+
+	pokemon, ok := cfg.pokedex[args[0]]
+	if !ok {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	}
+
+	fmt.Printf("Name: %s\n", pokemon.Name)
+	fmt.Printf("Height: %d\n", pokemon.Height)
+	fmt.Printf("Weight: %d\n", pokemon.Weight)
+	fmt.Println("Stats:")
+	for _, s := range pokemon.Stats {
+		fmt.Printf("  -%s: %d\n", s.Stat.Name, s.BaseStat)
+	}
+	fmt.Println("Types:")
+	for _, t := range pokemon.Types {
+		fmt.Printf("  - %s\n", t.Type.Name)
 	}
 
 	return nil
