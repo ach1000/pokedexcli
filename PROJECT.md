@@ -9,10 +9,10 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 - Language: Go
 - Module: github.com/ach1000/pokedexcli
 - Current app type: interactive CLI with simple REPL loop
-- Current runtime behavior: prompts with `Pokedex > `, parses input, and prints the first command token in lowercase
+- Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help` and `exit`
 
 ## Current File Map
-- `main.go`: program entry point; runs an infinite REPL loop using stdin scanner and `cleanInput`.
+- `main.go`: program entry point; runs an infinite REPL loop, defines command registry, and dispatches callbacks.
 - `repl.go`: contains `cleanInput(text string) []string` utility.
 - `repl_test.go`: table-driven tests for `cleanInput`.
 - `Makefile`: convenience targets for build, run, test, clean.
@@ -61,7 +61,7 @@ Make targets:
 ## Assumptions and Constraints
 - Package structure is currently single-package (`package main`).
 - No external dependencies beyond Go standard library.
-- REPL currently accepts free text input and uses the first normalized token as the command.
+- REPL uses the first normalized token as the command key in a command registry.
 - Output binary name is `pokedexcli`.
 
 ## REPL Runtime Behavior
@@ -69,10 +69,13 @@ Make targets:
 - Input read via `bufio.Scanner` from `os.Stdin`.
 - Input is normalized via `cleanInput`.
 - Empty input is ignored.
-- Output format for non-empty input: `Your command was: <first-word>`.
+- Supported commands:
+	- `help`: prints a welcome message and dynamically lists registered commands.
+	- `exit`: prints `Closing the Pokedex... Goodbye!` and exits the program.
+- Unknown commands print `Unknown command`.
 
 ## Suggested Next Evolutions
-- Add command dispatch map and handlers beyond echoing first token.
+- Move command callbacks and registry into dedicated files as command count grows.
 - Add command parsing and dispatch tests.
 - Add error-path and edge-case tests once command handling exists.
 
