@@ -8,14 +8,14 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 ## Project Overview
 - Language: Go
 - Module: github.com/ach1000/pokedexcli
-- Current app type: minimal CLI skeleton
-- Current runtime behavior: prints `Hello, World!`
+- Current app type: interactive CLI with simple REPL loop
+- Current runtime behavior: prompts with `Pokedex > `, parses input, and prints the first command token in lowercase
 
 ## Current File Map
-- `main.go`: program entry point; prints a static greeting.
+- `main.go`: program entry point; runs an infinite REPL loop using stdin scanner and `cleanInput`.
 - `repl.go`: contains `cleanInput(text string) []string` utility.
 - `repl_test.go`: table-driven tests for `cleanInput`.
-- `Makefile`: convenience targets for build, run, test.
+- `Makefile`: convenience targets for build, run, test, clean.
 
 ## cleanInput Contract
 Function: `cleanInput(text string) []string`
@@ -52,15 +52,27 @@ Make targets:
 - `make build`
 - `make run`
 - `make test`
+- `make clean`
+
+`make clean` removes generated output artifacts:
+- `pokedexcli` (built binary)
+- `repl.log` (captured CLI output log)
 
 ## Assumptions and Constraints
 - Package structure is currently single-package (`package main`).
 - No external dependencies beyond Go standard library.
-- No interactive REPL loop yet; `cleanInput` is prepared for future REPL parsing usage.
+- REPL currently accepts free text input and uses the first normalized token as the command.
 - Output binary name is `pokedexcli`.
 
+## REPL Runtime Behavior
+- Prompt: `Pokedex > ` (no newline before input).
+- Input read via `bufio.Scanner` from `os.Stdin`.
+- Input is normalized via `cleanInput`.
+- Empty input is ignored.
+- Output format for non-empty input: `Your command was: <first-word>`.
+
 ## Suggested Next Evolutions
-- Add actual REPL loop in `main.go` or a dedicated REPL module.
+- Add command dispatch map and handlers beyond echoing first token.
 - Add command parsing and dispatch tests.
 - Add error-path and edge-case tests once command handling exists.
 

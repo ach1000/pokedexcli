@@ -1,4 +1,4 @@
-.PHONY: build run test
+.PHONY: build run test clean
 
 build:
 	go build -o pokedexcli .
@@ -8,3 +8,6 @@ run:
 
 test:
 	go test ./...
+
+clean:
+	rm -f pokedexcli repl.log
