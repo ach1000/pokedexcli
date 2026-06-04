@@ -9,10 +9,11 @@ IMPORTANT: Update this file whenever behavior, structure, commands, assumptions,
 - Language: Go
 - Module: github.com/ach1000/pokedexcli
 - Current app type: interactive CLI with simple REPL loop
-- Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help` and `exit`
+- Current runtime behavior: prompts with `Pokedex > `, dispatches commands via a registry, supports `help`, `exit`, `map`, and `mapb`
 
 ## Current File Map
-- `main.go`: program entry point; runs an infinite REPL loop, defines command registry, and dispatches callbacks.
+- `main.go`: program entry point; runs an infinite REPL loop, defines command registry, and dispatches callbacks with shared REPL config.
+- `internal/pokeapi/location_area.go`: internal PokeAPI client for paginated location-area requests.
 - `repl.go`: contains `cleanInput(text string) []string` utility.
 - `repl_test.go`: table-driven tests for `cleanInput`.
 - `Makefile`: convenience targets for build, run, test, clean.
@@ -62,6 +63,7 @@ Make targets:
 - Package structure is currently single-package (`package main`).
 - No external dependencies beyond Go standard library.
 - REPL uses the first normalized token as the command key in a command registry.
+- Command callbacks now share pagination state via `*config` (next/previous location URLs).
 - Output binary name is `pokedexcli`.
 
 ## REPL Runtime Behavior
@@ -72,11 +74,14 @@ Make targets:
 - Supported commands:
 	- `help`: prints a welcome message and dynamically lists registered commands.
 	- `exit`: prints `Closing the Pokedex... Goodbye!` and exits the program.
+	- `map`: fetches and prints the next 20 location-area names from PokeAPI.
+	- `mapb`: fetches and prints the previous 20 location-area names.
+- `mapb` on the first page prints `you're on the first page`.
 - Unknown commands print `Unknown command`.
 
 ## Suggested Next Evolutions
 - Move command callbacks and registry into dedicated files as command count grows.
-- Add command parsing and dispatch tests.
+- Add command parsing and dispatch tests, including map/mapb pagination behavior.
 - Add error-path and edge-case tests once command handling exists.
 
 ## Maintenance Rule
