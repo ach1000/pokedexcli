@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"sort"
@@ -16,6 +17,8 @@ type config struct {
 	nextLocationURL string
 	prevLocationURL string
 	httpClient      pokeapi.HTTPClient
+	pokedex         map[string]pokeapi.Pokemon
+	randIntn        func(int) int
 }
 
 type cliCommand struct {
@@ -53,6 +56,11 @@ func init() {
 			description: "Explore a location area",
 			callback:    commandExplore,
 		},
+		"catch": {
+			name:        "catch",
+			description: "Attempt to catch a Pokemon",
+			callback:    commandCatch,
+		},
 	}
 }
 
@@ -67,7 +75,7 @@ func commandHelp(_ *config, _ []string) error {
 	fmt.Println("Usage:")
 	fmt.Println()
 
-	preferredOrder := []string{"help", "exit", "map", "mapb", "explore"}
+	preferredOrder := []string{"help", "exit", "map", "mapb", "explore", "catch"}
 	printed := map[string]struct{}{}
 
 	for _, name := range preferredOrder {
@@ -136,6 +144,32 @@ func commandMapBack(cfg *config, _ []string) error {
 	return nil
 }
 
+func commandCatch(cfg *config, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("usage: catch <pokemon>")
+	}
+
+	name := args[0]
+	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+
+	pokemon, err := pokeapi.GetPokemon(name, cfg.httpClient)
+	if err != nil {
+		return err
+	}
+
+	// Higher base_experience → harder to catch.
+	// rand.Intn(base_experience) < 50 gives a reasonable spread:
+	// easy (~40 exp): ~100%, mid (~112 exp): ~45%, legendary (~600 exp): ~8%.
+	if cfg.randIntn(pokemon.BaseExperience) < 50 {
+		cfg.pokedex[pokemon.Name] = pokemon
+		fmt.Printf("%s was caught!\n", name)
+	} else {
+		fmt.Printf("%s escaped!\n", name)
+	}
+
+	return nil
+}
+
 func commandExplore(cfg *config, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage: explore <location-area>")
@@ -171,6 +205,8 @@ func main() {
 	replConfig := &config{
 		nextLocationURL: pokeapi.LocationAreaURL,
 		httpClient:      pokeapi.NewCachingClient(&http.Client{}, cache),
+		pokedex:         map[string]pokeapi.Pokemon{},
+		randIntn:        rand.Intn,
 	}
 
 	for {

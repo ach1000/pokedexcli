@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -54,6 +55,26 @@ func makeTestConfig(client pokeapi.HTTPClient) *config {
 	return &config{
 		nextLocationURL: pokeapi.LocationAreaURL,
 		httpClient:      client,
+		pokedex:         map[string]pokeapi.Pokemon{},
+		randIntn:        rand.Intn,
+	}
+}
+
+// --- commandHelp tests ---
+
+func TestCommandHelp_PrintsKnownCommands(t *testing.T) {
+	cfg := makeTestConfig(nil)
+
+	out := captureStdout(t, func() {
+		if err := commandHelp(cfg, nil); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	for _, name := range []string{"help", "exit", "map", "mapb", "explore", "catch"} {
+		if !strings.Contains(out, name) {
+			t.Errorf("expected %q in help output, got: %q", name, out)
+		}
 	}
 }
 
@@ -70,6 +91,33 @@ func TestCommandMapBack_FirstPage(t *testing.T) {
 
 	if !strings.Contains(out, "you're on the first page") {
 		t.Errorf("expected first-page message, got: %q", out)
+	}
+}
+
+func TestCommandMapBack_ReturnsPreviousPage(t *testing.T) {
+	client := &commandMockHTTPClient{body: twoPageLocationAreaJSON, statusCode: http.StatusOK}
+	cfg := makeTestConfig(client)
+	cfg.prevLocationURL = "https://pokeapi.co/api/v2/location-area/?offset=0&limit=20"
+
+	out := captureStdout(t, func() {
+		if err := commandMapBack(cfg, nil); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "bulbasaur-land") {
+		t.Errorf("expected area names in output, got: %q", out)
+	}
+}
+
+func TestCommandMapBack_PropagatesHTTPError(t *testing.T) {
+	client := &commandMockHTTPClient{err: errors.New("network down")}
+	cfg := makeTestConfig(client)
+	cfg.prevLocationURL = "https://pokeapi.co/api/v2/location-area/?offset=0&limit=20"
+
+	err := commandMapBack(cfg, nil)
+	if err == nil {
+		t.Fatal("expected error when HTTP client fails, got nil")
 	}
 }
 
@@ -129,6 +177,72 @@ func TestCommandMap_PropagatesHTTPError(t *testing.T) {
 	err := commandMap(cfg, nil)
 	if err == nil {
 		t.Fatal("expected an error when HTTP client fails, got nil")
+	}
+}
+
+// --- commandCatch tests ---
+
+const catchPikachuJSON = `{
+  "name": "pikachu",
+  "base_experience": 112,
+  "height": 4,
+  "weight": 60,
+  "stats": [],
+  "types": []
+}`
+
+func TestCommandCatch_MissingArgReturnsError(t *testing.T) {
+	cfg := makeTestConfig(nil)
+	if err := commandCatch(cfg, nil); err == nil {
+		t.Fatal("expected error when no pokemon arg given, got nil")
+	}
+}
+
+func TestCommandCatch_PropagatesHTTPError(t *testing.T) {
+	client := &commandMockHTTPClient{err: errors.New("network down")}
+	cfg := makeTestConfig(client)
+	if err := commandCatch(cfg, []string{"pikachu"}); err == nil {
+		t.Fatal("expected error when HTTP client fails, got nil")
+	}
+}
+
+func TestCommandCatch_CatchSuccess_AddsToPokedex(t *testing.T) {
+	client := &commandMockHTTPClient{body: catchPikachuJSON, statusCode: http.StatusOK}
+	cfg := makeTestConfig(client)
+	// Always return 0 so 0 < 50 is always true → guaranteed catch.
+	cfg.randIntn = func(_ int) int { return 0 }
+
+	out := captureStdout(t, func() {
+		if err := commandCatch(cfg, []string{"pikachu"}); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "was caught") {
+		t.Errorf("expected 'was caught' in output, got: %q", out)
+	}
+	if _, ok := cfg.pokedex["pikachu"]; !ok {
+		t.Error("expected pikachu to be in pokedex after catch, but it wasn't")
+	}
+}
+
+func TestCommandCatch_CatchFail_NotAddedToPokedex(t *testing.T) {
+	client := &commandMockHTTPClient{body: catchPikachuJSON, statusCode: http.StatusOK}
+	cfg := makeTestConfig(client)
+	// Always return base_experience - 1 so result >= 50 → guaranteed escape.
+	cfg.randIntn = func(n int) int { return n - 1 }
+
+	out := captureStdout(t, func() {
+		if err := commandCatch(cfg, []string{"pikachu"}); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	if !strings.Contains(out, "escaped") {
+		t.Errorf("expected 'escaped' in output, got: %q", out)
+	}
+	if _, ok := cfg.pokedex["pikachu"]; ok {
+		t.Error("expected pikachu NOT to be in pokedex after escape, but it was")
 	}
 }
 
