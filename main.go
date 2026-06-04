@@ -66,6 +66,11 @@ func init() {
 			description: "Inspect a caught Pokemon",
 			callback:    commandInspect,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "List all caught Pokemon",
+			callback:    commandPokedex,
+		},
 	}
 }
 
@@ -80,7 +85,7 @@ func commandHelp(_ *config, _ []string) error {
 	fmt.Println("Usage:")
 	fmt.Println()
 
-	preferredOrder := []string{"help", "exit", "map", "mapb", "explore", "catch", "inspect"}
+	preferredOrder := []string{"help", "exit", "map", "mapb", "explore", "catch", "inspect", "pokedex"}
 	printed := map[string]struct{}{}
 
 	for _, name := range preferredOrder {
@@ -149,6 +154,18 @@ func commandMapBack(cfg *config, _ []string) error {
 	return nil
 }
 
+func commandPokedex(cfg *config, _ []string) error {
+	if len(cfg.pokedex) == 0 {
+		fmt.Println("Your Pokedex is empty.")
+		return nil
+	}
+	fmt.Println("Your Pokedex:")
+	for name := range cfg.pokedex {
+		fmt.Printf(" - %s\n", name)
+	}
+	return nil
+}
+
 func commandInspect(cfg *config, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage: inspect <pokemon>")
@@ -194,6 +211,7 @@ func commandCatch(cfg *config, args []string) error {
 	if cfg.randIntn(pokemon.BaseExperience) < 50 {
 		cfg.pokedex[pokemon.Name] = pokemon
 		fmt.Printf("%s was caught!\n", name)
+		fmt.Println("You may now inspect it with the inspect command.")
 	} else {
 		fmt.Printf("%s escaped!\n", name)
 	}
