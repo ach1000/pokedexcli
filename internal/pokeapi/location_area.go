@@ -9,6 +9,11 @@ import (
 
 const LocationAreaURL = "https://pokeapi.co/api/v2/location-area/?offset=0&limit=20"
 
+// HTTPClient is satisfied by *http.Client and by test mocks.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type LocationAreaResponse struct {
 	Count    int            `json:"count"`
 	Next     *string        `json:"next"`
@@ -21,12 +26,17 @@ type LocationArea struct {
 	URL  string `json:"url"`
 }
 
-func GetLocationAreas(pageURL string) (LocationAreaResponse, error) {
+func GetLocationAreas(pageURL string, client HTTPClient) (LocationAreaResponse, error) {
 	if pageURL == "" {
 		pageURL = LocationAreaURL
 	}
 
-	resp, err := http.Get(pageURL)
+	req, err := http.NewRequest(http.MethodGet, pageURL, nil)
+	if err != nil {
+		return LocationAreaResponse{}, err
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return LocationAreaResponse{}, err
 	}

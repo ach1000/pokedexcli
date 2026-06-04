@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net/http"
 	"os"
 	"sort"
 
@@ -12,6 +13,7 @@ import (
 type config struct {
 	nextLocationURL string
 	prevLocationURL string
+	httpClient      pokeapi.HTTPClient
 }
 
 type cliCommand struct {
@@ -91,7 +93,7 @@ func commandHelp(_ *config) error {
 }
 
 func commandMap(cfg *config) error {
-	locationAreas, err := pokeapi.GetLocationAreas(cfg.nextLocationURL)
+	locationAreas, err := pokeapi.GetLocationAreas(cfg.nextLocationURL, cfg.httpClient)
 	if err != nil {
 		return err
 	}
@@ -112,7 +114,7 @@ func commandMapBack(cfg *config) error {
 		return nil
 	}
 
-	locationAreas, err := pokeapi.GetLocationAreas(cfg.prevLocationURL)
+	locationAreas, err := pokeapi.GetLocationAreas(cfg.prevLocationURL, cfg.httpClient)
 	if err != nil {
 		return err
 	}
@@ -137,7 +139,10 @@ func stringValue(value *string) string {
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	replConfig := &config{nextLocationURL: pokeapi.LocationAreaURL}
+	replConfig := &config{
+		nextLocationURL: pokeapi.LocationAreaURL,
+		httpClient:      &http.Client{},
+	}
 
 	for {
 		fmt.Print("Pokedex > ")
