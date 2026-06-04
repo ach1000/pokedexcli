@@ -111,6 +111,7 @@ Make targets:
 
 ## Suggested Next Evolutions
 - Move command callbacks into dedicated files as command count grows.
+- Canonicalize cache keys for equivalent PokeAPI URLs (e.g. treat default pagination query params consistently) to reduce duplicate cache entries.
 
 ## Ideas for Extending the Project
 - Update the CLI to support the "up" arrow to cycle through previous commands.
